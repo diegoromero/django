@@ -1,6 +1,7 @@
 import inspect
 import re
 
+from bson.objectid import ObjectId
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
@@ -56,7 +57,8 @@ def _clean_credentials(credentials):
 def _get_user_session_key(request):
     # This value in the session is always serialized to a string, so we need
     # to convert it back to Python whenever we access it.
-    return get_user_model()._meta.pk.to_python(request.session[SESSION_KEY])
+    if SESSION_KEY in request.session:
+        return ObjectId(request.session[SESSION_KEY])
 
 
 def authenticate(**credentials):
@@ -108,7 +110,7 @@ def login(request, user):
             request.session.flush()
     else:
         request.session.cycle_key()
-    request.session[SESSION_KEY] = user._meta.pk.value_to_string(user)
+    request.session[SESSION_KEY] = str(user.pk)  # user._meta.pk.value_to_string(user)
     request.session[BACKEND_SESSION_KEY] = user.backend
     request.session[HASH_SESSION_KEY] = session_auth_hash
     if hasattr(request, 'user'):
